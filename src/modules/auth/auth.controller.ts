@@ -12,7 +12,7 @@ export class AuthController {
     } catch (error) {
       next(error);
     }
-  }
+  } 
 
   async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

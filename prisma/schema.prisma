@@ -1,0 +1,154 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  DOCTOR
+  PATIENT
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  name         String
+  role         Role
+  phone        String?
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  doctorPlans  MealPlan[]  @relation("DoctorPlans")
+  patientPlans MealPlan[]  @relation("PatientPlans")
+  
+  // Doctor-Patient relationship
+  patients     User[]      @relation("DoctorPatients")
+  doctors      User[]      @relation("DoctorPatients")
+
+  // Refresh tokens
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model MealPlan {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  doctorId    String
+  doctor      User     @relation("DoctorPlans", fields: [doctorId], references: [id])
+  
+  patientId   String
+  patient     User     @relation("PatientPlans", fields: [patientId], references: [id])
+
+  // Daily meals
+  dailyMeals  DailyMeal[]
+
+  // Recommendations
+  recommendations Recommendation[]
+
+  @@map("meal_plans")
+}
+
+model DailyMeal {
+  id         String   @id @default(cuid())
+  dayNumber  Int      // Day 1, 2, 3... of the plan
+  dayName    String   // Monday, Tuesday, etc.
+  
+  mealPlanId String
+  mealPlan   MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+
+  // Meals of the day
+  meals      Meal[]
+
+  @@map("daily_meals")
+}
+
+model Meal {
+  id          String   @id @default(cuid())
+  type        MealType
+  name        String
+  description String?
+  calories    Int?
+  protein     Float?   // in grams
+  carbs       Float?   // in grams
+  fats        Float?   // in grams
+  time        String?  // e.g., "08:00"
+  
+  dailyMealId String
+  dailyMeal   DailyMeal @relation(fields: [dailyMealId], references: [id], onDelete: Cascade)
+
+  // Food items
+  foods       Food[]
+
+  @@map("meals")
+}
+
+enum MealType {
+  BREAKFAST
+  MORNING_SNACK
+  LUNCH
+  AFTERNOON_SNACK
+  DINNER
+  EVENING_SNACK
+}
+
+model Food {
+  id       String  @id @default(cuid())
+  name     String
+  quantity String  // e.g., "100g", "1 cup"
+  calories Int?
+  notes    String?
+  
+  mealId   String
+  meal     Meal    @relation(fields: [mealId], references: [id], onDelete: Cascade)
+
+  @@map("foods")
+}
+
+model Recommendation {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  priority    Priority @default(MEDIUM)
+  category    String   // e.g., "Hydration", "Exercise", "Sleep"
+  
+  mealPlanId  String
+  mealPlan    MealPlan @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+
+  @@map("recommendations")
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+}
+

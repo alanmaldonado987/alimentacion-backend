@@ -6,16 +6,12 @@ import { createPlanSchema, updatePlanSchema } from './plans.schema.js';
 
 const router = Router();
 
-// All routes require authentication
 router.use(authenticate);
 
-// Get plans (both doctor and patient can access)
 router.get('/', plansController.getPlans.bind(plansController));
 
-// Get specific plan
 router.get('/:id', plansController.getPlanById.bind(plansController));
 
-// Doctor-only routes
 router.post(
   '/',
   authorize('DOCTOR'),
@@ -36,7 +32,6 @@ router.delete(
   plansController.deletePlan.bind(plansController)
 );
 
-// Stats endpoints
 router.get('/stats/doctor', authorize('DOCTOR'), plansController.getDoctorStats.bind(plansController));
 router.get('/stats/patient', authorize('PATIENT'), plansController.getPatientStats.bind(plansController));
 

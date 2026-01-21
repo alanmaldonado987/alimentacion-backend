@@ -6,7 +6,6 @@ import { createPatientSchema, updatePatientSchema } from './patients.schema.js';
 
 const router = Router();
 
-// All routes require authentication and DOCTOR role
 router.use(authenticate, authorize('DOCTOR'));
 
 router.post('/', validateBody(createPatientSchema), patientsController.createPatient.bind(patientsController));

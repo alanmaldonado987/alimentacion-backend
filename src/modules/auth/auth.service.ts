@@ -39,7 +39,7 @@ export class AuthService {
         password: hashedPassword,
         name: data.name,
         role: data.role,
-        phone: data.phone,
+        ...(data.phone && { phone: data.phone }),
       },
     });
 
@@ -93,7 +93,6 @@ export class AuthService {
     const accessToken = generateAccessToken(tokenPayload);
     const refreshToken = generateRefreshToken(tokenPayload);
 
-    // Clean up old refresh tokens for this user
     await prisma.refreshToken.deleteMany({
       where: {
         userId: user.id,
@@ -128,11 +127,10 @@ export class AuthService {
       });
 
       if (!storedToken || storedToken.expiresAt < new Date()) {
-        throw new UnauthorizedError('Refresh token inválido o expirado');
-      }
+      throw new UnauthorizedError('Refresh token inválido o expirado');
+    }
 
-      // Delete old token
-      await prisma.refreshToken.delete({
+    await prisma.refreshToken.delete({
         where: { id: storedToken.id },
       });
 

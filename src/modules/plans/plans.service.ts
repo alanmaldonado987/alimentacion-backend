@@ -14,7 +14,6 @@ type FullMealPlan = MealPlan & {
 
 export class PlansService {
   async createPlan(doctorId: string, data: CreatePlanInput): Promise<FullMealPlan> {
-    // Verify patient exists and belongs to doctor
     const doctor = await prisma.user.findUnique({
       where: { id: doctorId },
       include: {
@@ -174,7 +173,6 @@ export class PlansService {
       throw new NotFoundError('Plan no encontrado');
     }
 
-    // Verify access
     if (userRole === 'DOCTOR' && plan.doctorId !== userId) {
       throw new ForbiddenError('No tienes acceso a este plan');
     }
@@ -203,14 +201,12 @@ export class PlansService {
       throw new ForbiddenError('No tienes permisos para editar este plan');
     }
 
-    // If updating daily meals, delete existing and create new
     if (data.dailyMeals) {
       await prisma.dailyMeal.deleteMany({
         where: { mealPlanId: planId },
       });
     }
 
-    // If updating recommendations, delete existing and create new
     if (data.recommendations) {
       await prisma.recommendation.deleteMany({
         where: { mealPlanId: planId },

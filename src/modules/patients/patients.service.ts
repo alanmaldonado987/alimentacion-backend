@@ -99,7 +99,6 @@ export class PatientsService {
     patientId: string,
     data: UpdatePatientInput
   ): Promise<PatientWithoutPassword> {
-    // Verify patient belongs to doctor
     await this.getPatientById(doctorId, patientId);
 
     if (data.email) {
@@ -125,7 +124,6 @@ export class PatientsService {
   }
 
   async deletePatient(doctorId: string, patientId: string): Promise<void> {
-    // Verify patient belongs to doctor
     await this.getPatientById(doctorId, patientId);
 
     await prisma.user.delete({

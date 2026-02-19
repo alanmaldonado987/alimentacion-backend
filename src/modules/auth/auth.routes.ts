@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { authController } from './auth.controller.js';
 import { validateBody } from '../../middlewares/validate.middleware.js';
 import { authenticate } from '../../middlewares/auth.middleware.js';
-import { registerSchema, loginSchema, refreshTokenSchema } from './auth.schema.js';
+import { uploadAvatar } from '../../middlewares/upload.middleware.js';
+import { registerSchema, loginSchema, refreshTokenSchema, updateProfileSchema } from './auth.schema.js';
 
 const router = Router();
 
@@ -11,6 +12,9 @@ router.post('/login', validateBody(loginSchema), authController.login.bind(authC
 router.post('/refresh', validateBody(refreshTokenSchema), authController.refreshToken.bind(authController));
 router.post('/logout', authController.logout.bind(authController));
 router.get('/profile', authenticate, authController.getProfile.bind(authController));
+router.put('/profile', authenticate, validateBody(updateProfileSchema), authController.updateProfile.bind(authController));
+router.post('/profile/avatar', authenticate, uploadAvatar.single('avatar'), authController.uploadAvatar.bind(authController));
+router.delete('/profile/avatar', authenticate, authController.deleteAvatar.bind(authController));
 
 export default router;
 

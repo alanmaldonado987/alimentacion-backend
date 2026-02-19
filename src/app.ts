@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import { join } from 'path';
 import { config } from './config/index.js';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware.js';
 
@@ -18,6 +19,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
 // Health check
 app.get('/api/health', (req, res) => {

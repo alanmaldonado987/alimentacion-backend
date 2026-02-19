@@ -2,6 +2,7 @@ import prisma from '../../config/prisma.js';
 import { hashPassword } from '../../utils/password.js';
 import { ConflictError, NotFoundError, ForbiddenError } from '../../utils/errors.js';
 import { CreatePatientInput, UpdatePatientInput } from './patients.schema.js';
+import { sendPatientCredentialsEmail } from '../../utils/email.js';
 import type { User } from '@prisma/client';
 
 type PatientWithoutPassword = Omit<User, 'password'>;
@@ -11,6 +12,19 @@ export class PatientsService {
     doctorId: string,
     data: CreatePatientInput
   ): Promise<PatientWithoutPassword> {
+    const doctor = await prisma.user.findUnique({
+      where: { id: doctorId },
+      select: { name: true, email: true },
+    });
+
+    if (!doctor) {
+      throw new NotFoundError('Doctor no encontrado');
+    }
+
+    if (doctor.email === data.email) {
+      throw new ConflictError('No puedes crear un paciente con tu propio email');
+    }
+
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
     });
@@ -19,7 +33,7 @@ export class PatientsService {
       throw new ConflictError('El email ya está registrado');
     }
 
-    const hashedPassword = await hashPassword(data.password);
+    const hashedPassword = await hashPassword(data.cedula);
 
     const patient = await prisma.user.create({
       data: {
@@ -33,6 +47,17 @@ export class PatientsService {
         },
       },
     });
+
+    try {
+      await sendPatientCredentialsEmail({
+        patientEmail: data.email,
+        patientName: data.name,
+        doctorName: doctor.name,
+        cedula: data.cedula,
+      });
+    } catch (error) {
+      console.error('Error sending email, but patient was created:', error);
+    }
 
     const { password: _, ...patientWithoutPassword } = patient;
     return patientWithoutPassword;

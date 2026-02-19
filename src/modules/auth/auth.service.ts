@@ -25,9 +25,19 @@ export class AuthService {
   async register(data: RegisterInput): Promise<AuthResult> {
     const existingUser = await prisma.user.findUnique({
       where: { email: data.email },
+      include: {
+        doctors: true,
+        patients: true,
+      },
     });
 
     if (existingUser) {
+      if (existingUser.role === 'DOCTOR' && data.role === 'PATIENT') {
+        throw new ConflictError('Un doctor no puede registrarse como paciente');
+      }
+      if (existingUser.role === 'PATIENT' && data.role === 'DOCTOR') {
+        throw new ConflictError('Un paciente no puede registrarse como doctor');
+      }
       throw new ConflictError('El email ya está registrado');
     }
 
@@ -176,6 +186,47 @@ export class AuthService {
     }
 
     const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  async updateProfile(userId: string, data: { name?: string; email?: string; phone?: string; password?: string; avatar?: string }): Promise<Omit<User, 'password'>> {
+    if (data.email) {
+      const existingUser = await prisma.user.findFirst({
+        where: {
+          email: data.email,
+          id: { not: userId },
+        },
+      });
+
+      if (existingUser) {
+        throw new ConflictError('El email ya está en uso');
+      }
+    }
+
+    const updateData: any = {};
+    
+    if (data.name) {
+      updateData.name = data.name;
+    }
+    if (data.email) {
+      updateData.email = data.email;
+    }
+    if (data.phone !== undefined) {
+      updateData.phone = data.phone || null;
+    }
+    if (data.password && data.password.trim() !== '') {
+      updateData.password = await hashPassword(data.password);
+    }
+    if (data.avatar !== undefined) {
+      updateData.avatar = data.avatar || null;
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+    });
+
+    const { password: _, ...userWithoutPassword } = updated;
     return userWithoutPassword;
   }
 }

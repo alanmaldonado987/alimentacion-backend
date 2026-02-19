@@ -2,13 +2,7 @@ import { z } from 'zod';
 
 export const createPatientSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z
-    .string()
-    .min(8, 'La contraseña debe tener al menos 8 caracteres')
-    .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-      'La contraseña debe contener al menos una mayúscula, una minúscula y un número'
-    ),
+  cedula: z.string().min(5, 'La cédula debe tener al menos 5 caracteres'),
   name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   phone: z.string().optional(),
 });

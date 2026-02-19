@@ -79,6 +79,39 @@ export class PlansController {
       next(error);
     }
   }
+
+  async addMeal(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const doctorId = req.user!.userId;
+      const { planId } = req.params;
+      const plan = await plansService.addMeal(planId, doctorId, req.body);
+      sendSuccess(res, plan, 'Comida agregada exitosamente');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateMeal(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const doctorId = req.user!.userId;
+      const { planId, mealId } = req.params;
+      const plan = await plansService.updateMeal(planId, mealId, doctorId, req.body);
+      sendSuccess(res, plan, 'Comida actualizada exitosamente');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteMeal(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const doctorId = req.user!.userId;
+      const { planId, mealId } = req.params;
+      const plan = await plansService.deleteMeal(planId, mealId, doctorId);
+      sendSuccess(res, plan, 'Comida eliminada exitosamente');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const plansController = new PlansController();

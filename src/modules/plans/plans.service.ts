@@ -1,6 +1,6 @@
 import prisma from '../../config/prisma.js';
 import { NotFoundError, ForbiddenError } from '../../utils/errors.js';
-import { CreatePlanInput, UpdatePlanInput } from './plans.schema.js';
+import { CreatePlanInput, UpdatePlanInput, AddMealInput, UpdateMealInput } from './plans.schema.js';
 import type { MealPlan, DailyMeal, Meal, Food, Recommendation } from '@prisma/client';
 
 type FullMealPlan = MealPlan & {
@@ -31,8 +31,8 @@ export class PlansService {
       data: {
         title: data.title,
         description: data.description,
-        startDate: data.startDate,
-        endDate: data.endDate,
+        startDate: data.startDate || undefined,
+        endDate: data.endDate || undefined,
         doctorId,
         patientId: data.patientId,
         dailyMeals: data.dailyMeals
@@ -46,9 +46,7 @@ export class PlansService {
                     name: meal.name,
                     description: meal.description,
                     calories: meal.calories,
-                    protein: meal.protein,
-                    carbs: meal.carbs,
-                    fats: meal.fats,
+                    porcion: meal.porcion,
                     time: meal.time,
                     foods: meal.foods
                       ? {
@@ -232,9 +230,7 @@ export class PlansService {
                     name: meal.name,
                     description: meal.description,
                     calories: meal.calories,
-                    protein: meal.protein,
-                    carbs: meal.carbs,
-                    fats: meal.fats,
+                    porcion: meal.porcion,
                     time: meal.time,
                     foods: meal.foods
                       ? {
@@ -282,6 +278,135 @@ export class PlansService {
     });
 
     return updated;
+  }
+
+  async addMeal(planId: string, doctorId: string, data: AddMealInput): Promise<FullMealPlan> {
+    const plan = await prisma.mealPlan.findUnique({
+      where: { id: planId },
+    });
+
+    if (!plan) {
+      throw new NotFoundError('Plan no encontrado');
+    }
+
+    if (plan.doctorId !== doctorId) {
+      throw new ForbiddenError('No tienes permisos para editar este plan');
+    }
+
+    const dailyMeal = await prisma.dailyMeal.findUnique({
+      where: { id: data.dailyMealId },
+      include: { mealPlan: true },
+    });
+
+    if (!dailyMeal || dailyMeal.mealPlanId !== planId) {
+      throw new NotFoundError('Día no encontrado en este plan');
+    }
+
+    await prisma.meal.create({
+      data: {
+        type: data.type,
+        name: data.name,
+        description: data.description,
+        calories: data.calories,
+        porcion: data.porcion,
+        time: data.time,
+        dailyMealId: data.dailyMealId,
+        foods: data.foods
+          ? {
+              create: data.foods.map((food) => ({
+                name: food.name,
+                quantity: food.quantity,
+                calories: food.calories,
+                notes: food.notes,
+              })),
+            }
+          : undefined,
+      },
+    });
+
+    return this.getPlanById(planId, doctorId, 'DOCTOR');
+  }
+
+  async updateMeal(planId: string, mealId: string, doctorId: string, data: UpdateMealInput): Promise<FullMealPlan> {
+    const plan = await prisma.mealPlan.findUnique({
+      where: { id: planId },
+    });
+
+    if (!plan) {
+      throw new NotFoundError('Plan no encontrado');
+    }
+
+    if (plan.doctorId !== doctorId) {
+      throw new ForbiddenError('No tienes permisos para editar este plan');
+    }
+
+    const meal = await prisma.meal.findUnique({
+      where: { id: mealId },
+      include: { dailyMeal: true },
+    });
+
+    if (!meal || meal.dailyMeal.mealPlanId !== planId) {
+      throw new NotFoundError('Comida no encontrada en este plan');
+    }
+
+    if (data.foods) {
+      await prisma.food.deleteMany({
+        where: { mealId },
+      });
+    }
+
+    await prisma.meal.update({
+      where: { id: mealId },
+      data: {
+        type: data.type,
+        name: data.name,
+        description: data.description,
+        calories: data.calories,
+        porcion: data.porcion,
+        time: data.time,
+        foods: data.foods
+          ? {
+              create: data.foods.map((food) => ({
+                name: food.name,
+                quantity: food.quantity,
+                calories: food.calories,
+                notes: food.notes,
+              })),
+            }
+          : undefined,
+      },
+    });
+
+    return this.getPlanById(planId, doctorId, 'DOCTOR');
+  }
+
+  async deleteMeal(planId: string, mealId: string, doctorId: string): Promise<FullMealPlan> {
+    const plan = await prisma.mealPlan.findUnique({
+      where: { id: planId },
+    });
+
+    if (!plan) {
+      throw new NotFoundError('Plan no encontrado');
+    }
+
+    if (plan.doctorId !== doctorId) {
+      throw new ForbiddenError('No tienes permisos para editar este plan');
+    }
+
+    const meal = await prisma.meal.findUnique({
+      where: { id: mealId },
+      include: { dailyMeal: true },
+    });
+
+    if (!meal || meal.dailyMeal.mealPlanId !== planId) {
+      throw new NotFoundError('Comida no encontrada en este plan');
+    }
+
+    await prisma.meal.delete({
+      where: { id: mealId },
+    });
+
+    return this.getPlanById(planId, doctorId, 'DOCTOR');
   }
 
   async deletePlan(planId: string, doctorId: string): Promise<void> {

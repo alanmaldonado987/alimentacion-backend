@@ -111,7 +111,7 @@ export class AuthController {
         }
       }
 
-      const user = await authService.updateProfile(userId, { avatar: null });
+      const user = await authService.updateProfile(userId, { avatar: undefined });
       sendSuccess(res, user, 'Avatar eliminado exitosamente');
     } catch (error) {
       next(error);
